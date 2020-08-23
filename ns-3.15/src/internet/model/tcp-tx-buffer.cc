@@ -51,7 +51,7 @@ TcpTxBuffer::GetTypeId (void)
  * initialized below is insignificant.
  */
 TcpTxBuffer::TcpTxBuffer (uint32_t n)
-  : m_firstByteSeq (n), m_size (0), m_maxBuffer (32768), m_data (0)
+  : m_firstByteSeq (n), m_size (0), m_maxBuffer (32768), m_data (0), m_total (0)
 {
 }
 
@@ -77,6 +77,12 @@ TcpTxBuffer::Size (void) const
   return m_size;
 }
 
+uint32_t
+TcpTxBuffer::TotalByte (void) const
+{
+  return m_total;
+}
+  
 uint32_t
 TcpTxBuffer::MaxBufferSize (void) const
 {
@@ -107,6 +113,7 @@ TcpTxBuffer::Add (Ptr<Packet> p)
         {
           m_data.push_back (p);
           m_size += p->GetSize ();
+          m_total += p->GetSize ();
           NS_LOG_LOGIC ("Updated size=" << m_size << ", lastSeq=" << m_firstByteSeq + SequenceNumber32 (m_size));
         }
       return true;

@@ -34,7 +34,7 @@ from waflib.Configure import conf
 from waflib.Errors import WafError
 
 BOOST_LIBS = ('/usr/lib', '/usr/local/lib',
-			  '/opt/local/lib', '/sw/lib', '/lib')
+			  '/opt/local/lib', '/sw/lib', '/lib','/usr/lib/x86_64-linux-gnu')
 BOOST_INCLUDES = ('/usr/include', '/usr/local/include',
 				  '/opt/local/include', '/sw/include')
 BOOST_VERSION_FILE = 'boost/version.hpp'

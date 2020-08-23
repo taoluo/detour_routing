@@ -1,0 +1,33 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+def build(bld):
+    module = bld.create_ns3_module('topology', ['network', 'point-to-point'])
+    module.includes = '.'
+    module.source = [
+        'model/torus-topology-helper.cc',
+        'model/fattree-topology-helper.cc',
+        'model/vl2-topology-helper.cc',
+        'model/bcube-topology-helper.cc',
+        'model/tree-topology-helper.cc',
+        'model/topology-helper.cc',
+        'model/clos-topology-helper.cc',
+        'steiner-tree-manager/steiner-tree-manager.cc',
+        'steiner-tree-manager/topology-network.cc',
+        'steiner-tree-manager/steiner-tree-algorithm.cc',
+        ]
+
+    #headers = bld.new_task_gen('ns3header')
+    headers = bld.new_task_gen(features=['ns3header'])
+    headers.module = 'topology'
+    headers.source = [
+        'model/torus-topology-helper.h',
+        'model/bcube-topology-helper.h',
+        'model/fattree-topology-helper.h',
+        'model/vl2-topology-helper.h',
+        'model/tree-topology-helper.h',
+        'model/topology-helper.h',
+        'model/clos-topology-helper.h',
+        'steiner-tree-manager/steiner-tree-manager.h',
+        'steiner-tree-manager/topology-network.h',
+        'steiner-tree-manager/steiner-tree-algorithm.h',
+        ]

@@ -47,6 +47,11 @@ Application::GetTypeId (void)
                    TimeValue (TimeStep (0)),
                    MakeTimeAccessor (&Application::m_stopTime),
                    MakeTimeChecker ())
+    .AddAttribute ("Desync", "desynchronize",
+                   TimeValue (Seconds (0.0)),
+                   MakeTimeAccessor (&Application::m_desync),
+                   MakeTimeChecker ())
+    
   ;
   return tid;
 }
@@ -65,6 +70,13 @@ void
 Application::SetStartTime (Time start)
 {
   m_startTime = start;
+   
+  if (m_desync.IsStrictlyPositive())
+  {
+    double tmp =  m_rand.GetValue(0,m_desync.GetDouble());
+    //std::cout<<tmp<<std::endl;
+    m_startTime = m_startTime + TimeStep(tmp);
+  }
 }
 void
 Application::SetStopTime (Time stop)
@@ -86,6 +98,7 @@ void
 Application::DoStart (void)
 {
   m_startEvent = Simulator::Schedule (m_startTime, &Application::StartApplication, this);
+  //std::cout<<"start time "<<m_startTime.GetDouble()<<std::endl;
   if (m_stopTime != TimeStep (0))
     {
       m_stopEvent = Simulator::Schedule (m_stopTime, &Application::StopApplication, this);

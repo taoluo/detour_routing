@@ -23,6 +23,7 @@ def build(bld):
         'model/tag.cc',
         'model/tag-buffer.cc',
         'model/trailer.cc',
+	'model/broadcom-node.cc',
 	'utils/address-utils.cc',
         'utils/data-rate.cc',
         'utils/drop-tail-queue.cc',
@@ -55,6 +56,7 @@ def build(bld):
         'helper/node-container.cc',
         'helper/packet-socket-helper.cc',
         'helper/trace-helper.cc',
+	'model/ecmp-tag.cc',
         ]
 
     network_test = bld.create_ns3_module_test_library('network')
@@ -93,6 +95,7 @@ def build(bld):
         'model/tag.h',
         'model/tag-buffer.h',
         'model/trailer.h',
+	'model/broadcom-node.h',
       	'utils/address-utils.h',
         'utils/data-rate.h',
         'utils/drop-tail-queue.h',
@@ -129,6 +132,7 @@ def build(bld):
         'helper/node-container.h',
         'helper/packet-socket-helper.h',
         'helper/trace-helper.h',
+	'model/ecmp-tag.h',
         ]
 
     if (bld.env['ENABLE_EXAMPLES']):

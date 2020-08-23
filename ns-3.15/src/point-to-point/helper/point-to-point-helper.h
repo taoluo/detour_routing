@@ -182,6 +182,7 @@ private:
   ObjectFactory m_channelFactory;
   ObjectFactory m_remoteChannelFactory;
   ObjectFactory m_deviceFactory;
+  //ObjectFactory m_broadcomFactory;
 };
 
 } // namespace ns3

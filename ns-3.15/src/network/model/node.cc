@@ -31,6 +31,10 @@
 #include "ns3/global-value.h"
 #include "ns3/boolean.h"
 #include "ns3/simulator.h"
+#include "ns3/names.h"
+#include "ns3/node-list.h"
+#include "ns3/node-container.h"
+
 
 NS_LOG_COMPONENT_DEFINE ("Node");
 
@@ -68,9 +72,14 @@ Node::GetTypeId (void)
 
 Node::Node()
   : m_id (0),
-    m_sid (0)
+    m_sid (0),
+    m_TOflow (0),
+    m_FRflow (0),
+    m_TOcnt (0),
+    m_FRcnt (0)
 {
   Construct ();
+  
 }
 
 Node::Node(uint32_t sid)
@@ -84,6 +93,7 @@ void
 Node::Construct (void)
 {
   m_id = NodeList::Add (this);
+  m_broadcom = CreateObject<BroadcomNode>();
 }
 
 Node::~Node ()
@@ -330,5 +340,29 @@ Node::NotifyDeviceAdded (Ptr<NetDevice> device)
     }  
 }
  
+void
+Node::UpdateStatus(uint32_t TO, uint32_t FR)
+{
+  m_TOcnt += TO;
+  m_FRcnt += FR;
+  m_TOflow += TO? 1:0;
+  m_FRflow += FR? 1:0;
+    
+}
 
+void
+Node::ReportStatus(uint32_t& TOcnt, uint32_t& FRcnt, uint32_t& TOflow, uint32_t& FRflow)
+{
+  TOflow = m_TOflow;
+  FRflow = m_FRflow;
+  m_TOflow = 0;
+  m_FRflow = 0;
+
+  TOcnt = m_TOcnt;
+  FRcnt = m_FRcnt;
+  m_TOcnt = 0;
+  m_FRcnt = 0;
+}
+
+  
 } // namespace ns3

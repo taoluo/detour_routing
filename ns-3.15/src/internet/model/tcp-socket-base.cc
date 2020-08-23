@@ -991,6 +991,7 @@ TcpSocketBase::ProcessEstablished (Ptr<Packet> packet, const TcpHeader& tcpHeade
     }
   else if (tcpflags == TcpHeader::FIN || tcpflags == (TcpHeader::FIN | TcpHeader::ACK))
     { // Received FIN or FIN+ACK, bring down this socket nicely
+      std::cout<<"Received FIN "<<m_endPoint->GetPeerAddress().Get()<<":"<<m_endPoint->GetPeerPort()<<std::endl;
       PeerClose (packet, tcpHeader);
     }
   else if (tcpflags == 0)
@@ -1017,11 +1018,16 @@ void
 TcpSocketBase::ReceivedAck (Ptr<Packet> packet, const TcpHeader& tcpHeader)
 {
   NS_LOG_FUNCTION (this << tcpHeader);
-
+  std::cout<<m_endPoint->GetLocalAddress().Get()<<" ReceivedAck"<<std::endl;
   // Received ACK. Compare the ACK number against highest unacked seqno
   if (0 == (tcpHeader.GetFlags () & TcpHeader::ACK))
     { // Ignore if no ACK flag
     }
+  else if (tcpHeader.GetFlags() & TcpHeader::ECE)
+    {
+      std::cout<<"receive ECE"<<std::endl;
+    }
+  
   else if (tcpHeader.GetAckNumber () < m_txBuffer.HeadSequence ())
     { // Case 1: Old ACK, ignored.
       NS_LOG_LOGIC ("Ignored ack of " << tcpHeader.GetAckNumber ());
@@ -1154,6 +1160,7 @@ TcpSocketBase::ProcessSynRcvd (Ptr<Packet> packet, const TcpHeader& tcpHeader,
       // possibly due to ACK lost in 3WHS. If in-sequence ACK is received, the
       // handshake is completed nicely.
       NS_LOG_INFO ("SYN_RCVD -> ESTABLISHED");
+      std::cout<<"Received SYNACK "<<m_endPoint->GetPeerPort()<<std::endl;
       m_state = ESTABLISHED;
       m_connected = true;
       m_retxEvent.Cancel ();
@@ -1187,8 +1194,10 @@ TcpSocketBase::ProcessSynRcvd (Ptr<Packet> packet, const TcpHeader& tcpHeader,
     }
   else if (tcpflags == (TcpHeader::FIN | TcpHeader::ACK))
     {
+       std::cout<<"Receive FIN "<<m_endPoint->GetPeerPort()<<std::endl;
       if (tcpHeader.GetSequenceNumber () == m_rxBuffer.NextRxSequence ())
         { // In-sequence FIN before connection complete. Set up connection and close.
+          std::cout<<"really FIN"<<m_endPoint->GetPeerPort()<<std::endl;
           m_connected = true;
           m_retxEvent.Cancel ();
           m_highTxMark = ++m_nextTxSequence;
@@ -1288,6 +1297,7 @@ TcpSocketBase::ProcessWait (Ptr<Packet> packet, const TcpHeader& tcpHeader)
         }
       else if (m_state == FIN_WAIT_2)
         {
+          std::cout<<Simulator::Now().GetSeconds()<<"[ProcessWait] Finish "<<m_endPoint->GetLocalAddress().Get()<<std::endl;
           TimeWait ();
         }
       SendEmptyPacket (TcpHeader::ACK);
@@ -1525,6 +1535,21 @@ TcpSocketBase::SendEmptyPacket (uint8_t flags)
   bool hasSyn = flags & TcpHeader::SYN;
   bool hasFin = flags & TcpHeader::FIN;
   bool isAck = flags == TcpHeader::ACK;
+
+  std::cout<<Simulator::Now().GetSeconds()<<":";
+
+  if (flags & TcpHeader::ACK)
+    std::cout<<"[ACK] ";
+  if (hasFin)
+    std::cout<<"[FIN] ";
+  if (hasSyn)
+    std::cout<<"[SYN] ";
+  
+  std::cout<<m_endPoint->GetLocalAddress().Get()<<":"<<m_endPoint->GetLocalPort()<<" -> ";
+  std::cout<<m_endPoint->GetPeerAddress().Get()<<":"<<m_endPoint->GetPeerPort()<<" "<<p->GetSize();
+  std::cout<<" tcp "<<s.GetValue()<<" "<<m_rxBuffer.NextRxSequence().GetValue()<<std::endl;
+ 
+  
   if (hasSyn)
     {
       if (m_cnCount == 0)
@@ -1738,11 +1763,15 @@ TcpSocketBase::SendDataPacket (SequenceNumber32 seq, uint32_t maxSize, bool with
         }
       else if (m_state == CLOSE_WAIT)
         { // On passive close: Peer sent me FIN already
-          NS_LOG_INFO ("CLOSE_WAIT -> LAST_ACK");
-          m_state = LAST_ACK;
+          //detour routing disable that
+          //NS_LOG_INFO ("CLOSE_WAIT -> LAST_ACK");
+          //m_state = LAST_ACK;
         }
     }
   TcpHeader header;
+  //if (m_ECNCapable)
+  //flags |= TcpHeader::ECT;
+ 
   header.SetFlags (flags);
   header.SetSequenceNumber (seq);
   header.SetAckNumber (m_rxBuffer.NextRxSequence ());
@@ -1768,9 +1797,9 @@ TcpSocketBase::SendDataPacket (SequenceNumber32 seq, uint32_t maxSize, bool with
     }
   NS_LOG_LOGIC ("Send packet via TcpL4Protocol with flags 0x" << std::hex << static_cast<uint32_t> (flags) << std::dec);
   if (m_endPoint)
-    {
-      m_tcp->SendPacket (p, header, m_endPoint->GetLocalAddress (),
-                         m_endPoint->GetPeerAddress (), m_boundnetdevice);
+    {  
+        m_tcp->SendPacket (p, header, m_endPoint->GetLocalAddress (),
+                           m_endPoint->GetPeerAddress (), m_boundnetdevice);
     }
   else
     {
@@ -1778,6 +1807,19 @@ TcpSocketBase::SendDataPacket (SequenceNumber32 seq, uint32_t maxSize, bool with
                          m_endPoint6->GetPeerAddress (), m_boundnetdevice);
     }
   m_rtt->SentSeq (seq, sz);       // notify the RTT
+
+
+  std::cout<<Simulator::Now().GetSeconds()<<": [data] ";
+      
+  if (flags & TcpHeader::ACK)
+    std::cout<<"[ACK] ";
+  if (flags & TcpHeader::FIN)
+    std::cout<<"[FIN] ";
+  std::cout<<m_endPoint->GetLocalAddress().Get()<<":"<<m_endPoint->GetLocalPort()<<"->"<<m_endPoint->GetPeerAddress().Get()<<":"<<m_endPoint->GetPeerPort()<<" "<<p->GetSize()<<" tcp "<<m_nextTxSequence<<" "<<m_rxBuffer.NextRxSequence()<<std::endl;
+
+
+
+  
   // Notify the application of the data being sent unless this is a retransmit
   if (seq == m_nextTxSequence)
     {
@@ -2124,9 +2166,11 @@ TcpSocketBase::DoRetransmit ()
     }
   // Retransmit a data packet: Call SendDataPacket
   NS_LOG_LOGIC ("TcpSocketBase " << this << " retxing seq " << m_txBuffer.HeadSequence ());
+  std::cout<<Simulator::Now().GetSeconds()<<": Retransmit ";
   uint32_t sz = SendDataPacket (m_txBuffer.HeadSequence (), m_segmentSize, true);
   // In case of RTO, advance m_nextTxSequence
   m_nextTxSequence = std::max (m_nextTxSequence.Get (), m_txBuffer.HeadSequence () + sz);
+  
 
 }
 

@@ -53,6 +53,7 @@ public:
   uint32_t MaxBufferSize (void) const;
   void SetMaxBufferSize (uint32_t s);
   uint32_t Size (void) const;
+  uint32_t TotalByte(void) const;
   uint32_t Available () const;
   bool Finished (void);
 
@@ -82,6 +83,7 @@ public:
   uint32_t m_availBytes;                     //< Number of bytes available to read, i.e. contiguous block at head
   std::map<SequenceNumber32, Ptr<Packet> > m_data;
   //< Corresponding data (may be null)
+  uint32_t m_total;
 };
 
 } //namepsace ns3

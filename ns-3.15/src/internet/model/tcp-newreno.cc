@@ -40,6 +40,12 @@ TcpNewReno::GetTypeId (void)
   static TypeId tid = TypeId ("ns3::TcpNewReno")
     .SetParent<TcpSocketBase> ()
     .AddConstructor<TcpNewReno> ()
+    .AddAttribute ("EnableFastRecovery", 
+                   "Whether enable.",
+                   BooleanValue (true),
+                   MakeBooleanAccessor (&TcpNewReno::m_fastrecovery),
+                   MakeBooleanChecker<uint32_t> ())
+    
     .AddAttribute ("ReTxThreshold", "Threshold for fast retransmit",
                     UintegerValue (3),
                     MakeUintegerAccessor (&TcpNewReno::m_retxThresh),
@@ -48,6 +54,15 @@ TcpNewReno::GetTypeId (void)
 		    BooleanValue (false),
 		    MakeBooleanAccessor (&TcpNewReno::m_limitedTx),
 		    MakeBooleanChecker ())
+    .AddAttribute ("EnableECN", "Enable ECN",
+		    BooleanValue (false),
+		    MakeBooleanAccessor (&TcpNewReno::m_ecn),
+		    MakeBooleanChecker ())
+    .AddAttribute ("EnableDCTCP", "Enable DCTCP",
+		    BooleanValue (false),
+		    MakeBooleanAccessor (&TcpNewReno::m_DCTCP),
+		    MakeBooleanChecker ())
+    
     .AddTraceSource ("CongestionWindow",
                      "The TCP connection's congestion window",
                      MakeTraceSourceAccessor (&TcpNewReno::m_cWnd))
@@ -58,7 +73,12 @@ TcpNewReno::GetTypeId (void)
 TcpNewReno::TcpNewReno (void)
   : m_retxThresh (3), // mute valgrind, actual value set by the attribute system
     m_inFastRec (false),
-    m_limitedTx (false) // mute valgrind, actual value set by the attribute system
+    m_limitedTx (false), // mute valgrind, actual value set by the attribute system
+    m_inFastRec (false),
+    m_updateseq (0),
+    m_ecn_marked (0),
+    m_dctcp_alpha (0),
+    m_dctcp_g (0.0625)
 {
   NS_LOG_FUNCTION (this);
 }
@@ -69,8 +89,8 @@ TcpNewReno::TcpNewReno (const TcpNewReno& sock)
     m_ssThresh (sock.m_ssThresh),
     m_initialCWnd (sock.m_initialCWnd),
     m_retxThresh (sock.m_retxThresh),
-    m_inFastRec (false),
-    m_limitedTx (sock.m_limitedTx)
+    m_limitedTx (sock.m_limitedTx),
+
 {
   NS_LOG_FUNCTION (this);
   NS_LOG_LOGIC ("Invoked the copy constructor");
@@ -94,6 +114,7 @@ int
 TcpNewReno::Connect (const Address & address)
 {
   NS_LOG_FUNCTION (this << address);
+  std::cout<<"TCPNewReno Connecting"<<std::endl;
   InitializeCwnd ();
   return TcpSocketBase::Connect (address);
 }
@@ -112,9 +133,10 @@ TcpNewReno::Fork (void)
   return CopyObject<TcpNewReno> (this);
 }
 
+
 /** New ACK (up to seqnum seq) received. Increase cwnd and call TcpSocketBase::NewAck() */
 void
-TcpNewReno::NewAck (const SequenceNumber32& seq)
+TcpNewReno::NewAck (const SequenceNumber32& seq, bool ce)
 {
   NS_LOG_FUNCTION (this << seq);
   NS_LOG_LOGIC ("TcpNewReno receieved ACK for seq " << seq <<
@@ -138,6 +160,10 @@ TcpNewReno::NewAck (const SequenceNumber32& seq)
       NS_LOG_INFO ("Received full ACK. Leaving fast recovery with cwnd set to " << m_cWnd);
     }
 
+
+  //Rui
+  ECNSlowdown (seq, ce);
+  
   // Increase of cwnd based on current phase (slow start or congestion avoidance)
   if (m_cWnd < m_ssThresh)
     { // Slow start mode, add one segSize to cWnd. Default m_ssThresh is 65535. (RFC2001, sec.1)
@@ -162,6 +188,24 @@ void
 TcpNewReno::DupAck (const TcpHeader& t, uint32_t count)
 {
   NS_LOG_FUNCTION (this << count);
+
+  if (!m_fastrecovery)
+  {
+    std::cout<<"TcpNewReno disable FR"<<std::endl;
+    return;
+  }
+
+  //Rui
+  bool ce;
+  if ( t.GetFlags() & TcpHeader::ECE )
+    ce = 1;
+  else
+    ce = 0;
+  SequenceNumber32 seq = t.GetAckNumber();
+  ECNSlowdown (seq, ce);
+
+
+  
   if (count == m_retxThresh && !m_inFastRec)
     { // triple duplicate ack triggers fast retransmit (RFC2582 sec.3 bullet #1)
       m_ssThresh = std::max (2 * m_segmentSize, BytesInFlight () / 2);
@@ -183,7 +227,50 @@ TcpNewReno::DupAck (const TcpHeader& t, uint32_t count)
       NS_LOG_INFO ("Limited transmit");
       uint32_t sz = SendDataPacket (m_nextTxSequence, m_segmentSize, true);
       m_nextTxSequence += sz;                    // Advance next tx sequence
-    };
+    }
+}
+
+void
+TcpNewReno::ECNSlowdown (const SequenceNumber32& seq, bool ce)
+{
+  m_dctcp_total++;
+  if (ce)
+    {
+      m_ecn_marked++;
+    }
+  
+  if (seq > m_updateseq)
+    {
+      double temp_alpha;
+      m_updateseq = m_highTxMark.Get();
+      if (m_DCTCP)
+        {
+          if (m_dctcp_total > 0)
+            temp_alpha = ((double) m_dctcp_marked) / m_dctcp_total;
+          else
+            temp_alpha = 0;
+          
+          m_dctcp_alpha = (1 - m_dctcp_g) * m_dctcp_alpha + m_dctcp_g * temp_alpha;
+          
+          if (m_ecn_marked > 0)
+            {
+            std::cout<<"[newreno] NewAck: DCTCP Slowdown"<<std::endl;
+            m_ssThresh = std::max (2 * m_segmentSize, (uint32_t)((1 - m_dctcp_alpha / 2) * m_cWnd.Get()));
+            m_cWnd = m_ssThresh;
+          }
+        }
+      else if (m_ecn)
+        {
+          if (m_ecn_marked > 0)
+            {
+              std::cout<<"[newreno] NewAck: ECN Slowdown"<<std::endl;
+              m_ssThresh = std::max (2 * m_segmentSize, m_cWnd.Get() / 2);
+              m_cWnd = m_ssThresh;
+            }
+        }
+      m_dctcp_total = 0;
+      m_dctcp_marked = 0;
+    } 
 }
 
 /** Retransmit timeout */

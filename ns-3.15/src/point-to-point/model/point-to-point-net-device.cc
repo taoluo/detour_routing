@@ -29,6 +29,9 @@
 #include "point-to-point-net-device.h"
 #include "point-to-point-channel.h"
 #include "ppp-header.h"
+#include "ns3/boolean.h"
+#include "ns3/ecmp-header.h"
+#include "ns3/drop-tail-queue.h"
 
 NS_LOG_COMPONENT_DEFINE ("PointToPointNetDevice");
 
@@ -67,7 +70,7 @@ PointToPointNetDevice::GetTypeId (void)
                    TimeValue (Seconds (0.0)),
                    MakeTimeAccessor (&PointToPointNetDevice::m_tInterframeGap),
                    MakeTimeChecker ())
-
+    
     //
     // Transmit queueing discipline for the device which includes its own set
     // of trace hooks.
@@ -77,6 +80,10 @@ PointToPointNetDevice::GetTypeId (void)
                    PointerValue (),
                    MakePointerAccessor (&PointToPointNetDevice::m_queue),
                    MakePointerChecker<Queue> ())
+
+
+   .AddAttribute("DynamicBuffer", "xx",
+                    BooleanValue(false), MakeBooleanAccessor(&PointToPointNetDevice::m_dynamic), MakeBooleanChecker())
 
     //
     // Trace sources at the "top" of the net device, where packets transition
@@ -149,7 +156,11 @@ PointToPointNetDevice::PointToPointNetDevice ()
     m_txMachineState (READY),
     m_channel (0),
     m_linkUp (false),
-    m_currentPkt (0)
+    m_currentPkt (0),
+    m_pkt_count (0),
+    m_pkt_detoured (0),
+    m_cycle_pkt_count (0)
+
 {
   NS_LOG_FUNCTION (this);
 }
@@ -203,6 +214,100 @@ PointToPointNetDevice::SetInterframeGap (Time t)
   m_tInterframeGap = t;
 }
 
+
+void
+PointToPointNetDevice::ReportQueueInfo (uint32_t &num_pkt, uint32_t &detoured_pkt)
+{
+  //data_pkt = m_data_pkt_count;
+  //empty_pkt = m_empty_pkt_count;
+  //detour_data = m_detour_data_pkt_count;
+  //detour_empty = m_detour_empty_pkt_count;
+
+  num_pkt = m_pkt_count;
+  detoured_pkt = m_pkt_detoured;
+  
+  return;
+}
+
+bool
+PointToPointNetDevice::CheckBufferOverflow (uint32_t outDev, uint32_t packetsize)
+{
+  bool overflow = false;
+  uint32_t pktsize = packetsize + 2; //plus ppp Header
+  if(m_dynamic)
+  {
+    if(m_node->m_broadcom->CheckEgressAdmission(outDev,0,pktsize))
+      overflow = false;
+    else
+      overflow = true;
+  }
+  else
+  {
+    Ptr<DropTailQueue> queue = DynamicCast<DropTailQueue>(GetQueue());
+    uint32_t maxq, qlen;
+    queue->GetQueueLength(qlen, maxq);
+    if ( qlen + pktsize >= maxq)
+      overflow = true;
+    else
+      overflow = false;
+  }
+  return overflow;
+}
+
+  
+void
+PointToPointNetDevice::EnqueueUpdateCounter(Ptr<Packet> packet )
+{
+  PppHeader ppp;
+  ECMPHeader ECMPhdr;
+  
+
+  packet->RemoveHeader(ppp);
+  packet->RemoveHeader(ECMPhdr);
+
+  m_pkt_count++;
+  if (ECMPhdr.GetDetourCount() > 0)
+    m_pkt_detoured++;  
+
+  packet->AddHeader(ECMPhdr);
+  packet->AddHeader(ppp);
+
+  return;
+}
+
+  
+void
+PointToPointNetDevice::DequeueUpdateCounter(Ptr<Packet> packet )
+{
+  PppHeader ppp;
+  ECMPHeader ECMPhdr;
+  
+
+  packet->RemoveHeader(ppp);
+  packet->RemoveHeader(ECMPhdr);
+
+  m_pkt_count--;
+  if (ECMPhdr.GetDetourCount() > 0)
+    m_pkt_detoured--;  
+  
+  packet->AddHeader(ECMPhdr);
+  packet->AddHeader(ppp);
+
+  m_cycle_pkt_count++;
+  
+  return;
+}
+
+
+  
+void
+PointToPointNetDevice::CyclePktCount (uint32_t &num_pkt)
+{
+  num_pkt = m_cycle_pkt_count;
+  m_cycle_pkt_count = 0;
+  return;
+}
+
 bool
 PointToPointNetDevice::TransmitStart (Ptr<Packet> p)
 {
@@ -219,9 +324,33 @@ PointToPointNetDevice::TransmitStart (Ptr<Packet> p)
   m_currentPkt = p;
   m_phyTxBeginTrace (m_currentPkt);
 
+
+
+  if(m_dynamic)
+    //if support dynamic buffer, set queus length = infinite and use dynamic buffer admission
+  {
+    PppHeader ppp;
+    ECMPHeader ECMPhdr;
+    p->RemoveHeader(ppp);
+    p->RemoveHeader(ECMPhdr);
+    uint32_t outDev = ECMPhdr.GetSendport();
+    p->AddHeader(ECMPhdr);
+    p->AddHeader(ppp);  
+    m_node->m_broadcom->RemoveFromEgressAdmission(outDev, 0, p->GetSize());
+  }
+
+  
+
+
+
+  
+  DequeueUpdateCounter(p);
+  
   Time txTime = Seconds (m_bps.CalculateTxTime (p->GetSize ()));
   Time txCompleteTime = txTime + m_tInterframeGap;
-
+  
+  
+  
   NS_LOG_LOGIC ("Schedule TransmitCompleteEvent in " << txCompleteTime.GetSeconds () << "sec");
   Simulator::Schedule (txCompleteTime, &PointToPointNetDevice::TransmitComplete, this);
 
@@ -230,6 +359,9 @@ PointToPointNetDevice::TransmitStart (Ptr<Packet> p)
     {
       m_phyTxDropTrace (p);
     }
+
+
+  
   return result;
 }
 
@@ -465,10 +597,14 @@ PointToPointNetDevice::Send (
   const Address &dest, 
   uint16_t protocolNumber)
 {
+ 
   NS_LOG_FUNCTION_NOARGS ();
   NS_LOG_LOGIC ("p=" << packet << ", dest=" << &dest);
   NS_LOG_LOGIC ("UID is " << packet->GetUid ());
 
+
+
+  
   //
   // If IsLinkUp() is false it means there is no channel to send any packet 
   // over so we just hit the drop trace on the packet and return an error.
@@ -485,6 +621,38 @@ PointToPointNetDevice::Send (
   //
   AddHeader (packet, protocolNumber);
 
+
+  
+  if(m_dynamic)
+    //if support dynamic buffer, set queus length = infinite and use dynamic buffer admission
+  {
+    //std::cout<<"send"<<std::endl;
+    PppHeader ppp;
+    ECMPHeader ECMPhdr;
+    packet->RemoveHeader(ppp);
+    packet->RemoveHeader(ECMPhdr);
+    uint32_t outDev = ECMPhdr.GetSendport();
+    packet->AddHeader(ECMPhdr);
+    packet->AddHeader(ppp);
+
+    if(m_node->m_broadcom->CheckEgressAdmission(outDev, 0, packet->GetSize()))  
+    {
+      //std::cout<<"checked"<<std::endl;
+      m_node->m_broadcom->UpdateEgressAdmission(outDev, 0, packet->GetSize());
+    }
+    else
+    {
+      //std::cout<<"send fail"<<std::endl;
+      m_macTxDropTrace (packet);
+      return false;
+    }
+  }
+ 
+
+
+
+
+  
   m_macTxTrace (packet);
 
   //
@@ -499,6 +667,8 @@ PointToPointNetDevice::Send (
       //
       if (m_queue->Enqueue (packet) == true)
         {
+          EnqueueUpdateCounter(packet);
+          
           packet = m_queue->Dequeue ();
           m_snifferTrace (packet);
           m_promiscSnifferTrace (packet);
@@ -507,13 +677,22 @@ PointToPointNetDevice::Send (
       else
         {
           // Enqueue may fail (overflow)
+          std::cout<<"send fail.."<<std::endl;
           m_macTxDropTrace (packet);
           return false;
         }
     }
   else
     {
-      return m_queue->Enqueue (packet);
+      //std::cout<<packet->GetSize()<<std::endl;
+      bool ps = m_queue->Enqueue (packet);
+      
+      if (ps)
+        EnqueueUpdateCounter(packet);
+      //else
+      // std::cout<<"send fail.."<<std::endl;
+      return ps;
+      
     }
 }
 

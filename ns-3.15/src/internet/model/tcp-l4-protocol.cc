@@ -42,6 +42,7 @@
 #include "tcp-socket-factory-impl.h"
 #include "tcp-newreno.h"
 #include "rtt-estimator.h"
+#include "ipv4-header.h"
 
 #include <vector>
 #include <sstream>
@@ -292,6 +293,7 @@ TcpL4Protocol::Receive (Ptr<Packet> packet,
 {
   NS_LOG_FUNCTION (this << packet << ipHeader << incomingInterface);
 
+  std::cout<<"tcp l4"<<std::endl;
   TcpHeader tcpHeader;
   if(Node::ChecksumEnabled ())
     {
@@ -388,7 +390,7 @@ TcpL4Protocol::Receive (Ptr<Packet> packet,
   if(Node::ChecksumEnabled ())
     {
       tcpHeader.EnableChecksums ();
-      tcpHeader.InitializeChecksum (src, dst, PROT_NUMBER);
+     tcpHeader.InitializeChecksum (src, dst, PROT_NUMBER);
     }
 
   packet->PeekHeader (tcpHeader);
@@ -571,6 +573,15 @@ TcpL4Protocol::SendPacket (Ptr<Packet> packet, const TcpHeader &outgoing,
       Ipv4Header header;
       header.SetDestination (daddr);
       header.SetProtocol (PROT_NUMBER);
+      /*
+      if (ECNCapable != 0)
+      {
+        header.SetEcn(Ipv4Header::ECT0);  //ECN Capable packet
+      }
+      else
+        header.SetEcn(Ipv4Header::NotECT);
+      */
+      
       Socket::SocketErrno errno_;
       Ptr<Ipv4Route> route;
       if (ipv4->GetRoutingProtocol () != 0)

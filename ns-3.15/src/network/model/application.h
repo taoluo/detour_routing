@@ -26,7 +26,7 @@
 #include "ns3/object.h"
 #include "ns3/ptr.h"
 #include "ns3/node.h"
-
+#include "ns3/random-variable.h"
 namespace ns3 {
 
 class Node;
@@ -126,6 +126,11 @@ protected:
   Ptr<Node>       m_node;
   Time m_startTime;
   Time m_stopTime;
+
+  //Rui
+  Time m_desync;
+  UniformVariable m_rand;
+  
   EventId m_startEvent;
   EventId m_stopEvent;
 };

@@ -52,6 +52,9 @@ public:
    */
   void SetMode (DropTailQueue::QueueMode mode);
 
+  bool NearFull (void) const;
+  void GetQueueLength (uint32_t &qlen, uint32_t &maxq);
+
   /**
    * Get the encapsulation mode of this device.
    *
@@ -69,6 +72,7 @@ private:
   uint32_t m_maxBytes;
   uint32_t m_bytesInQueue;
   QueueMode m_mode;
+  double m_nearfull;
 };
 
 } // namespace ns3

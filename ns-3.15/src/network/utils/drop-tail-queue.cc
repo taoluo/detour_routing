@@ -20,6 +20,7 @@
 #include "ns3/enum.h"
 #include "ns3/uinteger.h"
 #include "drop-tail-queue.h"
+#include "ns3/double.h"
 
 NS_LOG_COMPONENT_DEFINE ("DropTailQueue");
 
@@ -48,6 +49,15 @@ TypeId DropTailQueue::GetTypeId (void)
                    UintegerValue (100 * 65535),
                    MakeUintegerAccessor (&DropTailQueue::m_maxBytes),
                    MakeUintegerChecker<uint32_t> ())
+
+    /*
+      .AddAttribute ("NearFullThreshold", 
+                   "The threshold(percentage) to notify NearFull by this DropTailQueue.",
+                   DoubleValue (0.9),
+                   MakeDoubleAccessor (&DropTailQueue::m_nearfull),
+                   MakeDoubleChecker<double> ())
+    */
+    
   ;
 
   return tid;
@@ -80,6 +90,22 @@ DropTailQueue::GetMode (void)
   return m_mode;
 }
 
+
+bool
+DropTailQueue::Overflow (uint32_t pktsize)
+{
+  //std::cout<<"NF = "<<m_NFBytes<<" Q = "<<m_bytesInQueue<<std::endl;
+  return (m_bytesInQueue + pktsize >= m_maxBytes ) ;
+}
+
+void
+DropTailQueue::GetQueueLength (uint32_t &qlen, uint32_t &maxq)
+{
+  qlen = m_bytesInQueue;
+  maxq = m_maxBytes;
+}
+
+  
 bool 
 DropTailQueue::DoEnqueue (Ptr<Packet> p)
 {
@@ -95,6 +121,7 @@ DropTailQueue::DoEnqueue (Ptr<Packet> p)
   if (m_mode == QUEUE_MODE_BYTES && (m_bytesInQueue + p->GetSize () >= m_maxBytes))
     {
       NS_LOG_LOGIC ("Queue full (packet would exceed max bytes) -- droppping pkt");
+      std::cout<<"queue"<<m_bytesInQueue<<" "<<p->GetSize()<<" "<<m_bytesInQueue + p->GetSize()<<" ? "<<m_maxBytes<<std::endl;
       Drop (p);
       return false;
     }

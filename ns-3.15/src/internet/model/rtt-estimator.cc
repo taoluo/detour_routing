@@ -69,6 +69,8 @@ void
 RttEstimator::SetMinRto (Time minRto)
 {
   NS_LOG_FUNCTION (this << minRto);
+  //std::cout<<minRto<<std::endl;
+  //exit(1);
   m_minRto = minRto;
 }
 Time 
@@ -281,13 +283,16 @@ Time RttMeanDeviation::RetransmitTimeout ()
   NS_LOG_FUNCTION (this);
   NS_LOG_DEBUG ("RetransmitTimeout:  var " << m_variance.GetSeconds () << " est " << m_currentEstimatedRtt.GetSeconds () << " multiplier " << m_multiplier);
   // RTO = srtt + 4* rttvar
-  int64_t temp = m_currentEstimatedRtt.ToInteger (Time::MS) + 4 * m_variance.ToInteger (Time::MS);
-  if (temp < m_minRto.ToInteger (Time::MS))
+  int64_t temp = m_currentEstimatedRtt.ToInteger (Time::US) + 4 * m_variance.ToInteger (Time::US);
+  //std::cout<<"temp "<<temp<<std::endl;
+  //std::cout<<"rto "<<m_minRto.ToInteger (Time::US)<<std::endl;
+  //exit(1);
+  if (temp < m_minRto.ToInteger (Time::US))
     {
-      temp = m_minRto.ToInteger (Time::MS);
+      temp = m_minRto.ToInteger (Time::US);
     } 
   temp = temp * m_multiplier; // Apply backoff
-  Time retval = Time::FromInteger (temp, Time::MS);
+  Time retval = Time::FromInteger (temp, Time::US);
   NS_LOG_DEBUG ("RetransmitTimeout:  return " << retval.GetSeconds ());
   return (retval);  
 }

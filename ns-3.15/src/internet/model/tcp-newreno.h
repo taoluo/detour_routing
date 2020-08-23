@@ -51,10 +51,11 @@ public:
 protected:
   virtual uint32_t Window (void); // Return the max possible number of unacked bytes
   virtual Ptr<TcpSocketBase> Fork (void); // Call CopyObject<TcpNewReno> to clone me
-  virtual void NewAck (SequenceNumber32 const& seq); // Inc cwnd and call NewAck() of parent
+  virtual void NewAck (SequenceNumber32 const& seq, bool ce = 0); // Inc cwnd and call NewAck() of parent
   virtual void DupAck (const TcpHeader& t, uint32_t count);  // Halving cwnd and reset nextTxSequence
   virtual void Retransmit (void); // Exit fast recovery upon retransmit timeout
 
+  
   // Implementing ns3::TcpSocket -- Attribute get/set
   virtual void     SetSegSize (uint32_t size);
   virtual void     SetSSThresh (uint32_t threshold);
@@ -63,7 +64,7 @@ protected:
   virtual uint32_t GetInitialCwnd (void) const;
 private:
   void InitializeCwnd (void);            // set m_cWnd when connection starts
-
+  void ECNSlowdown (const SequenceNumber& seq, bool ce);
 protected:
   TracedValue<uint32_t>  m_cWnd;         //< Congestion window
   uint32_t               m_ssThresh;     //< Slow Start Threshold
@@ -72,6 +73,18 @@ protected:
   uint32_t               m_retxThresh;   //< Fast Retransmit threshold
   bool                   m_inFastRec;    //< currently in fast recovery
   bool                   m_limitedTx;    //< perform limited transmit
+  bool                   m_inHalve;      //ecn halve
+  SequenceNumber32       m_ecnround;
+  bool                   m_fastrecovery;
+  bool                   m_ecn;
+  bool                   m_DCTCP;
+  //SequenceNumber32       m_maxseq;
+  SequenceNumber32       m_updateseq;
+  uint32_t               m_ecn_marked;
+  uint32_t               m_dctcp_total;
+  double                 m_dctcp_alpha;
+  double                 m_dctcp_g;
+  
 };
 
 } // namespace ns3

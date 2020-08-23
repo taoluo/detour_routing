@@ -185,6 +185,9 @@ public:
   virtual void SetPromiscReceiveCallback (PromiscReceiveCallback cb);
   virtual bool SupportsSendFrom (void) const;
 
+  void ReportQueueInfo (uint32_t &num_pkt, uint32_t &detoured_pkt);
+  void CyclePktCount (uint32_t &num_pkt);
+  bool CheckBufferOverflow (uint32_t outDev, uint32_t packetsize);
 protected:
   void DoMpiReceive (Ptr<Packet> p);
 
@@ -437,6 +440,7 @@ private:
   NetDevice::PromiscReceiveCallback m_promiscCallback;
   uint32_t m_ifIndex;
   bool m_linkUp;
+  bool m_dynamic;
   TracedCallback<> m_linkChangeCallbacks;
 
   static const uint16_t DEFAULT_MTU = 1500;
@@ -451,6 +455,13 @@ private:
 
   Ptr<Packet> m_currentPkt;
 
+ 
+  void EnqueueUpdateCounter(Ptr<Packet> p);
+  void DequeueUpdateCounter(Ptr<Packet> p);
+  
+  uint32_t m_pkt_count;
+  uint32_t m_pkt_detoured;
+  uint32_t m_cycle_pkt_count;
   /**
    * \brief PPP to Ethernet protocol number mapping
    * \param protocol A PPP protocol number

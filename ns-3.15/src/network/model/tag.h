@@ -69,8 +69,13 @@ public:
    * or Packet::PrintPacketTags methods.
    */
   virtual void Print (std::ostream &os) const = 0;
+
+
+  
 };
 
+  
+  
 } // namespace ns3
 
 #endif /* TAG_H */

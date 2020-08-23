@@ -235,6 +235,9 @@ protected:
   uint32_t              m_segmentSize; //< Segment size
   uint16_t              m_maxWinSize;  //< Maximum window size to advertise
   TracedValue<uint32_t> m_rWnd;        //< Flow control window at remote side
+
+  //ECN
+  //uint16_t             m_ECNCapable;  //ECN Capability
 };
 
 } // namespace ns3

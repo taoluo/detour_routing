@@ -27,6 +27,7 @@
 #include "ns3/callback.h"
 #include "ns3/ptr.h"
 #include "ns3/net-device.h"
+#include "ns3/broadcom-node.h"
 
 namespace ns3 {
 
@@ -195,6 +196,14 @@ public:
   static bool ChecksumEnabled (void);
 
 
+
+  //Rui
+  void UpdateStatus(uint32_t TO, uint32_t FR);
+  void ReportStatus(uint32_t&, uint32_t&, uint32_t&, uint32_t&);
+
+
+  
+  Ptr<BroadcomNode> m_broadcom;
 protected:
   /**
    * The dispose method. Subclasses must override this method
@@ -228,6 +237,18 @@ private:
   std::vector<Ptr<Application> > m_applications;
   ProtocolHandlerList m_handlers;
   DeviceAdditionListenerList m_deviceAdditionListeners;
+
+
+
+  //Rui
+  //(Maybe not the right place but..)Status
+  uint32_t m_TOflow;
+  uint32_t m_FRflow;
+  uint32_t m_TOcnt;
+  uint32_t m_FRcnt;
+ 
+  
+  
 };
 
 } // namespace ns3

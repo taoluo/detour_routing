@@ -61,6 +61,7 @@ public:
    */
   uint32_t Size (void) const;
 
+  uint32_t TotalByte(void) const;
   /**
    * Returns the Tx window size
    */
@@ -114,6 +115,7 @@ private:
   uint32_t m_size;                              //< Number of data bytes
   uint32_t m_maxBuffer;                         //< Max number of data bytes in buffer (SND.WND)
   std::list<Ptr<Packet> > m_data;               //< Corresponding data (may be null)
+  uint32_t m_total;
 };
 
 } // namepsace ns3

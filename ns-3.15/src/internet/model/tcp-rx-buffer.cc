@@ -48,7 +48,7 @@ TcpRxBuffer::GetTypeId (void)
  * initialized below is insignificant.
  */
 TcpRxBuffer::TcpRxBuffer (uint32_t n)
-  : m_nextRxSeq (n), m_gotFin (false), m_size (0), m_maxBuffer (32768), m_availBytes (0)
+  : m_nextRxSeq (n), m_gotFin (false), m_size (0), m_maxBuffer (32768), m_availBytes (0), m_total(0)
 {
 }
 
@@ -86,6 +86,13 @@ TcpRxBuffer::Size (void) const
   return m_size;
 }
 
+uint32_t
+TcpRxBuffer::TotalByte (void) const
+{
+  return m_total;
+}
+
+  
 uint32_t
 TcpRxBuffer::Available () const
 {
@@ -195,6 +202,9 @@ TcpRxBuffer::Add (Ptr<Packet> p, TcpHeader const& tcph)
   NS_LOG_LOGIC ("Buffered packet of seqno=" << headSeq << " len=" << p->GetSize ());
   // Update variables
   m_size += p->GetSize ();      // Occupancy
+  
+  m_total += p->GetSize();
+  //std::cout<<"size = "<<m_total<<std::endl;
   for (BufIterator i = m_data.begin (); i != m_data.end (); ++i)
     {
       if (i->first < m_nextRxSeq)

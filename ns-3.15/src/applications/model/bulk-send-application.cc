@@ -30,6 +30,7 @@
 #include "ns3/trace-source-accessor.h"
 #include "ns3/tcp-socket-factory.h"
 #include "bulk-send-application.h"
+#include "ns3/ecmp-tag.h"
 
 NS_LOG_COMPONENT_DEFINE ("BulkSendApplication");
 
@@ -145,6 +146,7 @@ void BulkSendApplication::StopApplication (void) // Called at time specified by 
 {
   NS_LOG_FUNCTION (this);
 
+  //std::cout<<"[BulkApp]Application stop"<<std::endl;
   if (m_socket != 0)
     {
       m_socket->Close ();
@@ -172,7 +174,14 @@ void BulkSendApplication::SendData (void)
           toSend = std::min (m_sendSize, m_maxBytes - m_totBytes);
         }
       NS_LOG_LOGIC ("sending packet at " << Simulator::Now ());
+      ECMPTag tag;
+      //std::cout<<"Left: "<<m_maxBytes - m_totBytes<<std::endl;
+      tag.SetRemainingByte(m_maxBytes - m_totBytes);
+      
       Ptr<Packet> packet = Create<Packet> (toSend);
+
+      packet->AddPacketTag(tag);
+      
       m_txTrace (packet);
       int actual = m_socket->Send (packet);
       if (actual > 0)
@@ -190,6 +199,7 @@ void BulkSendApplication::SendData (void)
   // Check if time to close (all sent)
   if (m_totBytes == m_maxBytes && m_connected)
     {
+      //std::cout<<"close"<<std::endl;
       m_socket->Close ();
       m_connected = false;
     }
