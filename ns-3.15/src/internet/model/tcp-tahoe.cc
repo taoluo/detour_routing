@@ -105,7 +105,7 @@ TcpTahoe::Fork (void)
 
 /** New ACK (up to seqnum seq) received. Increase cwnd and call TcpSocketBase::NewAck() */
 void
-TcpTahoe::NewAck (SequenceNumber32 const& seq)
+TcpTahoe::NewAck (SequenceNumber32 const& seq, bool ce)
 {
   NS_LOG_FUNCTION (this << seq);
   NS_LOG_LOGIC ("TcpTahoe receieved ACK for seq " << seq <<

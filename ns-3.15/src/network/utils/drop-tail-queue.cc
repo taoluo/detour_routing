@@ -21,6 +21,9 @@
 #include "ns3/uinteger.h"
 #include "drop-tail-queue.h"
 #include "ns3/double.h"
+#include "ns3/ppp-header.h"
+#include "ns3/ecmp-header.h"
+
 
 NS_LOG_COMPONENT_DEFINE ("DropTailQueue");
 
@@ -67,6 +70,8 @@ DropTailQueue::DropTailQueue () :
   Queue (),
   m_packets (),
   m_bytesInQueue (0)
+
+  
 {
   NS_LOG_FUNCTION_NOARGS ();
 }
@@ -95,7 +100,7 @@ bool
 DropTailQueue::Overflow (uint32_t pktsize)
 {
   //std::cout<<"NF = "<<m_NFBytes<<" Q = "<<m_bytesInQueue<<std::endl;
-  return (m_bytesInQueue + pktsize >= m_maxBytes ) ;
+  return (m_bytesInQueue + pktsize + 10 >= m_maxBytes ) ;
 }
 
 void
@@ -105,12 +110,69 @@ DropTailQueue::GetQueueLength (uint32_t &qlen, uint32_t &maxq)
   maxq = m_maxBytes;
 }
 
+  /*
+void
+DropTailQueue::ReportQueueInfo (uint32_t &num_pkt, uint32_t &detoured_pkt)
+{
+  //data_pkt = m_data_pkt_count;
+  //empty_pkt = m_empty_pkt_count;
+  //detour_data = m_detour_data_pkt_count;
+  //detour_empty = m_detour_empty_pkt_count;
+
+  num_pkt = m_pkt_count;
+  detoured_pkt = m_pkt_detoured;
+  
+  return;
+}
+ 
+    
+void
+DropTailQueue::EnqueueUpdateCounter(Ptr<Packet> packet )
+{
+  PppHeader ppp;
+  ECMPHeader ECMPhdr;
+  
+
+  packet->RemoveHeader(ppp);
+  packet->RemoveHeader(ECMPhdr);
+
+  m_pkt_count++;
+  if (ECMPhdr.GetDetourCount() > 0)
+    m_pkt_detoured++;  
+
+  packet->AddHeader(ECMPhdr);
+  packet->AddHeader(ppp);
+
+  return;
+}
+
+  
+void
+DropTailQueue::DequeueUpdateCounter(Ptr<Packet> packet )
+{
+  PppHeader ppp;
+  ECMPHeader ECMPhdr;
+  
+
+  packet->RemoveHeader(ppp);
+  packet->RemoveHeader(ECMPhdr);
+
+  m_pkt_count--;
+  if (ECMPhdr.GetDetourCount() > 0)
+    m_pkt_detoured--;  
+  
+  packet->AddHeader(ECMPhdr);
+  packet->AddHeader(ppp);
+
+  return;
+}
+  */
   
 bool 
 DropTailQueue::DoEnqueue (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION (this << p);
-
+  //std::cout<<"queue "<<m_bytesInQueue<<" "<<p->GetSize()<<" "<<m_bytesInQueue + p->GetSize()<<" ? "<<m_maxBytes<<std::endl;
   if (m_mode == QUEUE_MODE_PACKETS && (m_packets.size () >= m_maxPackets))
     {
       NS_LOG_LOGIC ("Queue full (at max packets) -- droppping pkt");
@@ -121,13 +183,17 @@ DropTailQueue::DoEnqueue (Ptr<Packet> p)
   if (m_mode == QUEUE_MODE_BYTES && (m_bytesInQueue + p->GetSize () >= m_maxBytes))
     {
       NS_LOG_LOGIC ("Queue full (packet would exceed max bytes) -- droppping pkt");
-      std::cout<<"queue"<<m_bytesInQueue<<" "<<p->GetSize()<<" "<<m_bytesInQueue + p->GetSize()<<" ? "<<m_maxBytes<<std::endl;
+      //std::cout<<"queue "<<m_bytesInQueue<<" "<<p->GetSize()<<" "<<m_bytesInQueue + p->GetSize()<<" ? "<<m_maxBytes<<std::endl;
       Drop (p);
       return false;
     }
 
+  //EnqueueUpdateCounter(p);
+  
   m_bytesInQueue += p->GetSize ();
   m_packets.push (p);
+
+ 
 
   NS_LOG_LOGIC ("Number packets " << m_packets.size ());
   NS_LOG_LOGIC ("Number bytes " << m_bytesInQueue);
@@ -135,6 +201,8 @@ DropTailQueue::DoEnqueue (Ptr<Packet> p)
   return true;
 }
 
+
+  
 Ptr<Packet>
 DropTailQueue::DoDequeue (void)
 {
@@ -150,6 +218,7 @@ DropTailQueue::DoDequeue (void)
   m_packets.pop ();
   m_bytesInQueue -= p->GetSize ();
 
+  //DequeueUpdateCounter(p);
   NS_LOG_LOGIC ("Popped " << p);
 
   NS_LOG_LOGIC ("Number packets " << m_packets.size ());

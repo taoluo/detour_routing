@@ -56,8 +56,8 @@ class BroadcomNode : public Object
 {
 public:
 
-	static const unsigned qCnt = 8;	// Number of queues/priorities used
-	static const unsigned pCnt = 64;	// Number of ports used
+	static const unsigned qCnt = 1;	// Number of queues/priorities used
+	static const unsigned pCnt = 8;	// Number of ports used
 	
 	static TypeId GetTypeId (void);
 

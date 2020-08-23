@@ -53,7 +53,7 @@ public:
 protected:
   virtual uint32_t Window (void); // Return the max possible number of unacked bytes
   virtual Ptr<TcpSocketBase> Fork (void); // Call CopyObject<TcpReno> to clone me
-  virtual void NewAck (const SequenceNumber32& seq); // Inc cwnd and call NewAck() of parent
+  virtual void NewAck (const SequenceNumber32& seq, bool ce = 0); // Inc cwnd and call NewAck() of parent
   virtual void DupAck (const TcpHeader& t, uint32_t count);  // Fast retransmit
   virtual void Retransmit (void); // Retransmit timeout
 

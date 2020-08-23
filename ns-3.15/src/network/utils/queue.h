@@ -54,6 +54,8 @@ public:
    * \return true if the queue is empty; false otherwise
    */
   bool IsEmpty (void) const;
+
+  //virtual bool NearFull (void) const {return 0};
   /**
    * Place a packet into the rear of the Queue
    * \param p packet to enqueue

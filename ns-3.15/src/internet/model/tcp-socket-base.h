@@ -156,7 +156,7 @@ protected:
   void TimeWait (void);  // Move from CLOSING or FIN_WAIT_2 to TIME_WAIT state
 
   // State transition functions
-  void ProcessEstablished (Ptr<Packet>, const TcpHeader&); // Received a packet upon ESTABLISHED state
+  void ProcessEstablished (Ptr<Packet>, const TcpHeader&, bool); // Received a packet upon ESTABLISHED state
   void ProcessListen (Ptr<Packet>, const TcpHeader&, const Address&, const Address&); // Process the newly received ACK
   void ProcessSynSent (Ptr<Packet>, const TcpHeader&); // Received a packet upon SYN_SENT
   void ProcessSynRcvd (Ptr<Packet>, const TcpHeader&, const Address&, const Address&); // Received a packet upon SYN_RCVD
@@ -173,10 +173,10 @@ protected:
 
   // Manage data tx/rx
   virtual Ptr<TcpSocketBase> Fork (void) = 0; // Call CopyObject<> to clone me
-  virtual void ReceivedAck (Ptr<Packet>, const TcpHeader&); // Received an ACK packet
-  virtual void ReceivedData (Ptr<Packet>, const TcpHeader&); // Recv of a data, put into buffer, call L7 to get it if necessary
+  virtual void ReceivedAck (Ptr<Packet>, const TcpHeader&, bool); // Received an ACK packet
+  virtual void ReceivedData (Ptr<Packet>, const TcpHeader&, bool); // Recv of a data, put into buffer, call L7 to get it if necessary
   virtual void EstimateRtt (const TcpHeader&); // RTT accounting
-  virtual void NewAck (SequenceNumber32 const& seq); // Update buffers w.r.t. ACK
+  virtual void NewAck (SequenceNumber32 const& seq, bool ce = 0); // Update buffers w.r.t. ACK
   virtual void DupAck (const TcpHeader& t, uint32_t count) = 0; // Received dupack
   virtual void ReTxTimeout (void); // Call Retransmit() upon RTO event
   virtual void Retransmit (void); // Halving cwnd and call DoRetransmit()
@@ -236,8 +236,13 @@ protected:
   uint16_t              m_maxWinSize;  //< Maximum window size to advertise
   TracedValue<uint32_t> m_rWnd;        //< Flow control window at remote side
 
-  //ECN
-  //uint16_t             m_ECNCapable;  //ECN Capability
+  //Rui
+  double                m_start;
+  double                m_stop;  
+  uint32_t               m_TO;
+  uint32_t               m_FR;
+  uint32_t               m_CntTimeout;
+  //uint32_t              m_totalByte;
 };
 
 } // namespace ns3

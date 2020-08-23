@@ -52,9 +52,12 @@ public:
    */
   void SetMode (DropTailQueue::QueueMode mode);
 
-  bool NearFull (void) const;
+  bool Overflow (uint32_t);
   void GetQueueLength (uint32_t &qlen, uint32_t &maxq);
 
+  //void EnqueueUpdateCounter(Ptr<Packet> p);
+  //void DequeueUpdateCounter(Ptr<Packet> p);
+  //void ReportQueueInfo(uint32_t&,uint32_t&);
   /**
    * Get the encapsulation mode of this device.
    *
@@ -73,6 +76,14 @@ private:
   uint32_t m_bytesInQueue;
   QueueMode m_mode;
   double m_nearfull;
+
+  //uint32_t m_pkt_count;
+  //uint32_t m_pkt_detoured;
+  //uint32_t m_data_pkt_count;
+  //uint32_t m_empty_pkt_count;
+  //uint32_t m_detour_data_pkt_count;
+  //uint32_t m_detour_empty_pkt_count;
+
 };
 
 } // namespace ns3

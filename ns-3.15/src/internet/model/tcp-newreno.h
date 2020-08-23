@@ -62,9 +62,14 @@ protected:
   virtual uint32_t GetSSThresh (void) const;
   virtual void     SetInitialCwnd (uint32_t cwnd);
   virtual uint32_t GetInitialCwnd (void) const;
+
+  
+ 
+
 private:
   void InitializeCwnd (void);            // set m_cWnd when connection starts
-  void ECNSlowdown (const SequenceNumber& seq, bool ce);
+  void ECNSlowdown (const SequenceNumber32& seq, bool ce);
+  void Openwnd ();
 protected:
   TracedValue<uint32_t>  m_cWnd;         //< Congestion window
   uint32_t               m_ssThresh;     //< Slow Start Threshold
@@ -73,17 +78,20 @@ protected:
   uint32_t               m_retxThresh;   //< Fast Retransmit threshold
   bool                   m_inFastRec;    //< currently in fast recovery
   bool                   m_limitedTx;    //< perform limited transmit
-  bool                   m_inHalve;      //ecn halve
-  SequenceNumber32       m_ecnround;
-  bool                   m_fastrecovery;
-  bool                   m_ecn;
-  bool                   m_DCTCP;
-  //SequenceNumber32       m_maxseq;
+
+
+  //Rui
   SequenceNumber32       m_updateseq;
   uint32_t               m_ecn_marked;
   uint32_t               m_dctcp_total;
   double                 m_dctcp_alpha;
   double                 m_dctcp_g;
+
+  bool                   m_fastrecovery;
+  bool                   m_ecn;
+  bool                   m_DCTCP;
+
+  uint32_t               m_maxcWnd;
   
 };
 

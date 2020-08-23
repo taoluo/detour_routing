@@ -292,8 +292,7 @@ TcpL4Protocol::Receive (Ptr<Packet> packet,
                         Ptr<Ipv4Interface> incomingInterface)
 {
   NS_LOG_FUNCTION (this << packet << ipHeader << incomingInterface);
-
-  std::cout<<"tcp l4"<<std::endl;
+  //std::cout<<"receive test3"<<std::endl;
   TcpHeader tcpHeader;
   if(Node::ChecksumEnabled ())
     {
@@ -461,7 +460,7 @@ TcpL4Protocol::Send (Ptr<Packet> packet,
                      uint16_t sport, uint16_t dport, Ptr<NetDevice> oif)
 {
   NS_LOG_FUNCTION (this << packet << saddr << daddr << sport << dport << oif);
-
+  //std::cout<<"send test2"<<std::endl;
   TcpHeader tcpHeader;
   tcpHeader.SetDestinationPort (dport);
   tcpHeader.SetSourcePort (sport);
@@ -474,7 +473,6 @@ TcpL4Protocol::Send (Ptr<Packet> packet,
                                 PROT_NUMBER);
   tcpHeader.SetFlags (TcpHeader::ACK);
   tcpHeader.SetAckNumber (SequenceNumber32 (0));
-
   packet->AddHeader (tcpHeader);
 
   Ptr<Ipv4> ipv4 = m_node->GetObject<Ipv4> ();
@@ -564,8 +562,8 @@ TcpL4Protocol::SendPacket (Ptr<Packet> packet, const TcpHeader &outgoing,
     }
   outgoingHeader.InitializeChecksum (saddr, daddr, PROT_NUMBER);
 
-  packet->AddHeader (outgoingHeader);
-
+  packet->AddHeader (outgoingHeader); 
+  
   Ptr<Ipv4> ipv4 = 
     m_node->GetObject<Ipv4> ();
   if (ipv4 != 0)
@@ -573,14 +571,6 @@ TcpL4Protocol::SendPacket (Ptr<Packet> packet, const TcpHeader &outgoing,
       Ipv4Header header;
       header.SetDestination (daddr);
       header.SetProtocol (PROT_NUMBER);
-      /*
-      if (ECNCapable != 0)
-      {
-        header.SetEcn(Ipv4Header::ECT0);  //ECN Capable packet
-      }
-      else
-        header.SetEcn(Ipv4Header::NotECT);
-      */
       
       Socket::SocketErrno errno_;
       Ptr<Ipv4Route> route;

@@ -54,17 +54,17 @@ BroadcomNode::GetTypeId (void)
 
 BroadcomNode::BroadcomNode()
 {
-	m_maxBufferBytes=9000000; //9MB
+	m_maxBufferBytes=2000000; //9MB
 	m_usedTotalBytes=0;
-
-	for (int i=0;i<pCnt;i++)
+    //std::cout<<"initiate broadcom"<<std::endl;
+	for (uint i=0;i<pCnt;i++)
 	{
 		m_usedIngressPortMinBytes[i]=0;
 		m_usedIngressPortSharedBytes[i]=0;
 		m_usedIngressPortMinExceed[i]=0;
 		m_usedIngressPortSharedExceed[i]=0;
 		m_usedEgressPortBytes[i]=0;
-		for (int j=0;j<qCnt;j++)
+		for (uint j=0;j<qCnt;j++)
 		{
 			m_usedIngressPGMinBytes[i][j]=0;
 			m_usedIngressPGSharedBytes[i][j]=0;
@@ -75,7 +75,7 @@ BroadcomNode::BroadcomNode()
 			m_pause_remote[i][j]=false;
 		}
 	}
-	for (int i=0;i<4;i++)
+	for (uint i=0;i<4;i++)
 	{
 		m_usedIngressSPBytes[i]=0;
 		m_usedIngressSPExceed[i]=0;
@@ -89,28 +89,28 @@ BroadcomNode::BroadcomNode()
 
 
 	//ingress params
-	m_buffer_cell_limit_sp=2000*1030; //ingress sp buffer threshold p.120
-	m_buffer_cell_limit_sp_shared=2000*1030; //ingress sp buffer shared threshold p.120, nonshare -> share
-	m_pg_min_cell=1030; //ingress pg guarantee p.121					---1
-	m_port_min_cell=1030; //ingress port guarantee						---2
-	m_pg_shared_limit_cell=20*1030; //max buffer for an ingress pg			---3	PAUSE
-	m_port_max_shared_cell=4800*1030; //max buffer for an ingress port		---4	PAUSE
-	m_pg_hdrm_limit=1000*1030; //ingress pg headroom
-	m_port_max_pkt_size=100*1030; //ingress global headroom
+	m_buffer_cell_limit_sp=2000*1500; //ingress sp buffer threshold p.120
+	m_buffer_cell_limit_sp_shared=2000*1500; //ingress sp buffer shared threshold p.120, nonshare -> share
+	m_pg_min_cell=1500; //ingress pg guarantee p.121					---1
+	m_port_min_cell=1500; //ingress port guarantee						---2
+	m_pg_shared_limit_cell=20*1500; //max buffer for an ingress pg			---3	PAUSE
+	m_port_max_shared_cell=4800*1500; //max buffer for an ingress port		---4	PAUSE
+	m_pg_hdrm_limit=1000*1500; //ingress pg headroom
+	m_port_max_pkt_size=100*1500; //ingress global headroom
 	//still needs reset limits..
-	m_port_min_cell_off = 4700*1030;
-	m_pg_shared_limit_cell_off = m_pg_shared_limit_cell-2*1030;
+	m_port_min_cell_off = 4700*1500;
+	m_pg_shared_limit_cell_off = m_pg_shared_limit_cell-2*1500;
 
 
 	//egress params
 	m_op_buffer_shared_limit_cell=m_maxBufferBytes; //per egress sp limit
 	m_op_uc_port_config_cell=m_maxBufferBytes; //per egress port limit
-	m_q_min_cell=1*1030;
+	m_q_min_cell=1*1500;
 	m_op_uc_port_config1_cell=m_maxBufferBytes;
 	
 	//qcn
-	m_pg_qcn_threshold=60*1030;
-	m_pg_qcn_threshold_max=60*1030;
+	m_pg_qcn_threshold=60*1500;
+	m_pg_qcn_threshold_max=60*1500;
 	m_pg_qcn_maxp = 0.1;
 
 	//dynamic threshold
@@ -165,24 +165,32 @@ BroadcomNode::CheckIngressAdmission(uint32_t port,uint32_t qIndex,uint32_t psize
 bool 
 BroadcomNode::CheckEgressAdmission(uint32_t port,uint32_t qIndex,uint32_t psize)
 {
-	if (m_usedEgressSPBytes[GetEgressSP(port,qIndex)]+psize>m_op_buffer_shared_limit_cell)  //exceed the sp limit
+  //std::cout<<"checkegreee "<<port<<" "<<qIndex<<" "<<psize<<std::endl;
+  //std::cout<<m_usedEgressSPBytes[GetEgressSP(port,qIndex)]<<" "<<m_op_buffer_shared_limit_cell<<std::endl;
+  //std::cout<<m_usedEgressPortBytes[port]<<" "<<m_op_uc_port_config_cell<<std::endl;
+  //std::cout<<m_usedEgressQSharedBytes[port][qIndex]<<" "<<m_op_uc_port_config1_cell<<std::endl;
+  if (m_usedEgressSPBytes[GetEgressSP(port,qIndex)]+psize>m_op_buffer_shared_limit_cell)  //exceed the sp limit
 	{
-		std::cout<<"WARNING: Drop because egress SP buffer full\n";
+      std::cout<<m_usedEgressSPBytes[GetEgressSP(port,qIndex)]<<" "<<m_op_buffer_shared_limit_cell<<std::endl;
+      std::cout<<"WARNING: Drop because egress SP buffer full"<<std::endl;
 		return false;
 	}
-
+    //std::cout<<m_op_uc_port_config_cell<<std::endl;
 	if (m_usedEgressPortBytes[port]+psize>m_op_uc_port_config_cell)	//exceed the port limit
 	{
-		std::cout<<"WARNING: Drop because egress Port buffer full\n";
+      std::cout<<m_usedEgressPortBytes[port]<<" "<<m_op_uc_port_config_cell<<std::endl;
+      std::cout<<"WARNING: Drop because egress Port buffer full\n";
 		return false;
 	}
-
+    //std::cout<<"checkegreee2"<<std::endl;
+    
 	if (m_usedEgressQSharedBytes[port][qIndex]+psize>m_op_uc_port_config1_cell) //exceed the queue limit
 	{
-		std::cout<<"WARNING: Drop because egress Q buffer full\n";
+      std::cout<<m_usedEgressQSharedBytes[port][qIndex]<<" "<<m_op_uc_port_config1_cell<<std::endl;
+      std::cout<<"WARNING: Drop because egress Q buffer full\n";
 		return false;
 	}
-
+    //std::cout<<"checkegreee3"<<std::endl;
 	return true;
 }
 
@@ -281,22 +289,23 @@ void
 BroadcomNode::UpdateEgressAdmission(uint32_t port,uint32_t qIndex,uint32_t psize)
 {
 
-	if (m_usedEgressQMinBytes[port][qIndex]+psize<m_q_min_cell)	//guaranteed
-	{
-		m_usedEgressQMinBytes[port][qIndex]+=psize;
-		return;
-	}
-	else
-	{
-		m_usedEgressQSharedBytes[port][qIndex]+=psize;
-		m_usedEgressPortBytes[port]+=psize;
-		m_usedEgressSPBytes[GetEgressSP(port,qIndex)]+=psize;
+  //std::cout<<"BEFORE ADD:"<<psize<<" "<<m_usedEgressQSharedBytes[port][qIndex]<<"\tTotal:"<<m_usedTotalBytes<<"\n";
+  if (m_usedEgressQMinBytes[port][qIndex]+psize<m_q_min_cell)	//guaranteed
+  {
+    m_usedEgressQMinBytes[port][qIndex]+=psize;
+    return;
+  }
+  else
+  {
+    m_usedEgressQSharedBytes[port][qIndex]+=psize;
+    m_usedEgressPortBytes[port]+=psize;
+    m_usedEgressSPBytes[GetEgressSP(port,qIndex)]+=psize;
+    
+    //std::cout<<"ADD:"<<psize<<" "<<m_usedEgressQSharedBytes[port][qIndex]<<"\tTotal:"<<m_usedTotalBytes<<"\n";
+    
+  }
 
-		//std::cout<<"ADD:"<<m_usedEgressQSharedBytes[port][qIndex]<<"\tTotal:"<<m_usedTotalBytes<<"\n";
-
-	}
-
-	return;
+  return;
 }
 
 void
@@ -375,12 +384,26 @@ BroadcomNode::RemoveFromEgressAdmission(uint32_t port,uint32_t qIndex,uint32_t p
 
 	if (m_usedEgressQSharedBytes[port][qIndex]>0)
 	{
-		m_usedEgressQSharedBytes[port][qIndex]-=psize;
-		m_usedEgressPortBytes[port]-=psize;
-		m_usedEgressSPBytes[GetIngressSP(port,qIndex)]-=psize;
+      //std::cout<<"BEFORE REMOVE:"<<psize<<" "<<m_usedEgressQSharedBytes[port][qIndex]<<" "<<m_usedEgressSPBytes[GetIngressSP(port,qIndex)]<<"\tTotal:"<<m_usedTotalBytes<<"\n";
+      if(m_usedEgressQSharedBytes[port][qIndex] >= psize)
+      {
+    
+		m_usedEgressQSharedBytes[port][qIndex] -= psize;
+		m_usedEgressPortBytes[port] -= psize;
+		m_usedEgressSPBytes[GetIngressSP(port,qIndex)] -= psize;
 
-		//std::cout<<"REMOVE:"<<m_usedEgressQSharedBytes[port][qIndex]<<"\tTotal:"<<m_usedTotalBytes<<"\n";
-
+	
+      }
+      else
+      {
+        uint32_t count = m_usedEgressQSharedBytes[port][qIndex];
+        m_usedEgressQSharedBytes[port][qIndex] = 0;
+  		m_usedEgressQMinBytes[port][qIndex]-=(psize - count);
+		m_usedEgressPortBytes[port] -= count;
+		m_usedEgressSPBytes[GetIngressSP(port,qIndex)] -= count;
+        
+      }
+      //std::cout<<"REMOVE:"<<psize<<" "<<m_usedEgressQSharedBytes[port][qIndex]<<" "<<m_usedEgressSPBytes[GetIngressSP(port,qIndex)]<<"\tTotal:"<<m_usedTotalBytes<<"\n";
 	}
 	else
 	{
@@ -420,7 +443,7 @@ BroadcomNode::GetPauseClasses(uint32_t port, uint32_t qIndex, bool pClasses[])
 			}
 		}
 		*/
-		for (int i=0;i<qCnt;i++)
+		for (uint i=0;i<qCnt;i++)
 		{
 			pClasses[i]=false;
 
@@ -439,7 +462,7 @@ BroadcomNode::GetPauseClasses(uint32_t port, uint32_t qIndex, bool pClasses[])
 		if (m_usedIngressPortSharedExceed[port]>0)					//pause the whole port
 		{
 			//std::cout<<"PAUSE Port:"<<port<<"\n";
-			for (int i=0;i<qCnt;i++)
+			for (uint i=0;i<qCnt;i++)
 			{
 				pClasses[i]=true;
 			}
@@ -447,7 +470,7 @@ BroadcomNode::GetPauseClasses(uint32_t port, uint32_t qIndex, bool pClasses[])
 		}
 		else
 		{
-			for (int i=0;i<qCnt;i++)
+			for (uint i=0;i<qCnt;i++)
 			{
 				pClasses[i]=false;
 			}
@@ -593,8 +616,8 @@ BroadcomNode::SetDynamicThreshold()
 void 
 BroadcomNode::SetMarkingThreshold(uint32_t kmin, uint32_t kmax, double pmax)
 {
-	m_pg_qcn_threshold = kmin*1030;
-	m_pg_qcn_threshold_max = kmax*1030;
+	m_pg_qcn_threshold = kmin*1500;
+	m_pg_qcn_threshold_max = kmax*1500;
 	m_pg_qcn_maxp = pmax;
 }
 

@@ -106,7 +106,7 @@ TcpReno::Fork (void)
 
 /** New ACK (up to seqnum seq) received. Increase cwnd and call TcpSocketBase::NewAck() */
 void
-TcpReno::NewAck (const SequenceNumber32& seq)
+TcpReno::NewAck (const SequenceNumber32& seq, bool ce)
 {
   NS_LOG_FUNCTION (this << seq);
   NS_LOG_LOGIC ("TcpReno receieved ACK for seq " << seq <<
