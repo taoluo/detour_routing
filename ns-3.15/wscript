@@ -334,7 +334,7 @@ def configure(conf):
             env.append_value('CXXFLAGS', '-fomit-frame-pointer') 
         if Options.options.build_profile == 'optimized': 
             if conf.check_compilation_flag('-march=native'):
-                env.append_value('CXXFLAGS', '-march=native') 
+                env.append_value('CXXFLAGS', '-march=corei7')
 
         if sys.platform == 'win32':
             env.append_value("LINKFLAGS", "-Wl,--enable-runtime-pseudo-reloc")
